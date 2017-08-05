@@ -10,6 +10,7 @@ import android.support.v7.widget.DefaultItemAnimator;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -19,7 +20,13 @@ import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.android.volley.Request;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.VolleyLog;
+import com.android.volley.toolbox.JsonObjectRequest;
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -104,79 +111,45 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void search() {
+        mNewsList.clear();
         String searchKey = editText.getText().toString().trim();
         if (!TextUtils.isEmpty(searchKey)) {
-            new SearchTask().execute(searchKey);
-        }
-    }
+            String tag_json_obj = "json_obj_req";
 
-    class SearchTask extends AsyncTask<String, Integer, String> {
-
-        @Override
-        protected void onPreExecute() {
-            super.onPreExecute();
+            String url = String.format(urlString,searchKey);
             showProgress();
-        }
+            JsonObjectRequest jsonObjReq = new JsonObjectRequest(Request.Method.GET,
+                    url, null,
+                    new Response.Listener<JSONObject>() {
 
-        @Override
-        protected String doInBackground(String... strings) {
-            mNewsList.clear();
-            HttpURLConnection urlConnection = null;
-            StringBuilder result = new StringBuilder();
-            try {
-                URL url = new URL(String.format(urlString, strings[0]));
-                urlConnection = (HttpURLConnection) url.openConnection();
-
-                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
-
-                String line;
-                while ((line = bufferedReader.readLine()) != null) {
-                    result.append(line);
-                }
-                String resultValue = result.toString();
-                return resultValue;
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            } finally {
-                if (urlConnection != null)
-                    urlConnection.disconnect();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            hideProgress();
-            try {
-                if (!TextUtils.isEmpty(result)) {
-                    JSONObject jsonObject = new JSONObject(result);
-                    String status = jsonObject.optString("status");
-                    if (!TextUtils.isEmpty(status)) {
-                        if (status.equalsIgnoreCase("OK")) {
-                            JSONArray jsonArray = jsonObject.optJSONArray("articles");
-                            if (jsonArray != null && jsonArray.length() > 0) {
-                                Gson gson = new Gson();
-                                NewsItem[] lNewsItems = gson.fromJson(jsonArray.toString(), NewsItem[].class);
-                                if (lNewsItems != null && lNewsItems.length > 0) {
-                                    for (NewsItem lObject : lNewsItems) {
-                                        mNewsList.add(lObject);
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            Log.d(TAG, response.toString());
+                            hideProgress();
+                            if(response==null) return;
+                            String status = response.optString("status");
+                            if (!TextUtils.isEmpty(status) && status.equalsIgnoreCase("OK")) {
+                                    JSONArray jsonArray = response.optJSONArray("articles");
+                                    if (jsonArray != null && jsonArray.length() > 0) {
+                                        Gson gson = new Gson();
+                                        mNewsList = gson.fromJson(jsonArray.toString(), new TypeToken<List<NewsItem>>(){}.getType());
                                     }
-                                }
                             }
+                            updateUI();
                         }
-                    }
-                }
-                updateUI();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
+                    }, new Response.ErrorListener() {
 
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    VolleyLog.d(TAG, "Error: " + error.getMessage());
+                    // hide the progress dialog
+                    hideProgress();
+                    updateUI();
+                }
+            });
+
+            // Adding request to request queue
+            AppController.getInstance().addToRequestQueue(jsonObjReq, tag_json_obj);
         }
     }
 
@@ -194,7 +167,7 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     private void updateUI() {
-        if (mNewsList != null && mNewsList.size() > 0) {
+        if (mNewsList != null) {
             mAdapter = new NewsListAdapter(mNewsList);
             recyclerView.setAdapter(mAdapter);
         } else {
@@ -205,13 +178,4 @@ public class SearchActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    public void onBackPressed() {
-
-        Intent intent = getIntent();
-        intent.putExtra("UpdatedText", editText.getText().toString().trim());
-        setResult(RESULT_OK, intent);
-        finish();
-        super.onBackPressed();
-    }
 }

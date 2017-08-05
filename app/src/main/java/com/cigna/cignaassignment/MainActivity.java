@@ -38,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
         mSearchView.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                hideVirtualKeyboard();
                 search();
             }
         });
@@ -47,7 +46,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
                 if (actionId == EditorInfo.IME_ACTION_DONE) {
-                    hideVirtualKeyboard();
                     search();
                 }
                 return false;
@@ -55,38 +53,14 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
-    private void hideVirtualKeyboard() {
-        View view = this.getCurrentFocus();
-        if (view != null) {
-            InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
-            imm.hideSoftInputFromWindow(mSearchView.getWindowToken(), 0);
-        }
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-
-    }
 
     private void search() {
         String searchKey = editText.getText().toString().trim();
         if(!TextUtils.isEmpty(searchKey)) {
             Intent intent = new Intent(this, SearchActivity.class);
             intent.putExtra("SearchText", searchKey);
-            startActivityForResult(intent, 0);
+            startActivity(intent);
         }
     }
 
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if(resultCode != RESULT_OK) return;
-        if(requestCode == 0) {
-            String searchText = data.getExtras().getString("UpdatedText");
-            if(!TextUtils.isEmpty(searchText)) {
-                editText.setText(searchText);
-            }
-        }
-    }
 }
