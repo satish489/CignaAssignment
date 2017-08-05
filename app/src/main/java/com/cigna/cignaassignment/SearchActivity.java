@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -44,7 +45,7 @@ public class SearchActivity extends AppCompatActivity {
 
     private static final String TAG = MainActivity.class.toString();
     EditText editText;
-    ProgressDialog progressDialog;
+    ProgressBar progressBar;
     String urlString = "https://newsapi.org/v1/articles?source=%s&apiKey=cfb33b18fba149509aec7137ec9c57d0";
     private List<NewsItem> mNewsList;
     private RecyclerView recyclerView;
@@ -58,7 +59,7 @@ public class SearchActivity extends AppCompatActivity {
         setContentView(R.layout.search_activity);
         editText = (EditText) findViewById(R.id.editText);
         recyclerView = (RecyclerView) findViewById(R.id.recycler_view);
-
+        progressBar = (ProgressBar) findViewById(R.id.progress);
         Bundle bundle = getIntent().getExtras();
         if(bundle != null) {
             searchText = bundle.getString("SearchText");
@@ -154,20 +155,17 @@ public class SearchActivity extends AppCompatActivity {
     }
 
     void showProgress() {
-        if (progressDialog == null) {
-            progressDialog = ProgressDialog.show(this, "", "Loading..!");
-        }
+        progressBar.setVisibility(View.VISIBLE);
+        recyclerView.setVisibility(View.GONE);
     }
 
     void hideProgress() {
-        if (progressDialog != null) {
-            progressDialog.dismiss();
-            progressDialog = null;
-        }
+        progressBar.setVisibility(View.GONE);
+        recyclerView.setVisibility(View.VISIBLE);
     }
 
     private void updateUI() {
-        if (mNewsList != null) {
+        if (mNewsList != null && mNewsList.size()>0) {
             mAdapter = new NewsListAdapter(mNewsList);
             recyclerView.setAdapter(mAdapter);
         } else {
